@@ -1,0 +1,81 @@
+import java.util.*;
+
+public class TokenRing{
+
+	public static void main(String[] args){
+		Scanner sc = new Scanner(System.in);
+		
+		System.out.print("Enter Number Of Nodes You Want In The Ring : ");
+		int n = sc.nextInt();
+		
+		System.out.println("Ring Formed Is As Below: ");
+		for(int i=0; i<n; i++){
+			System.out.print(i + " ");
+		}
+		
+		System.out.println("0");
+		
+		
+		int choice = 0;
+		
+		do{
+			System.out.print("Enter Sender : ");
+			int sender = sc.nextInt();
+			
+			System.out.print("Enter Receiver : ");
+			int receiver = sc.nextInt();
+			
+			System.out.print("Enter Data To Send : ");
+			int data = sc.nextInt();
+			
+			int token = 0;
+
+			System.out.print("Token Passing : ");
+			
+			for(int i=token; i<sender; i++){
+				System.out.print(" " + i + " -> ");
+			}
+			
+			System.out.println(" " + sender);
+			System.out.println("Sender: "+ sender +" Sending Data: " + data);
+
+			for(int i=sender; i!=receiver; i=(i+1)%n)
+			{
+				System.out.println("Data:" + data + " Forwarded By: " + i);
+		}
+
+		System.out.println("Receiver: " + receiver + " Received The Data: " + data);
+				
+		token = sender;
+			
+		System.out.println("Do You Want To Send Data Again? If YES Enter 1, If NO Enter 0: ");
+		choice = sc.nextInt();
+		
+		}while(choice == 1);		
+		
+	}
+}
+
+-------------------------------------------------
+
+  javac Tring.java
+    java Tring
+
+Question: Explain the concept of mutual exclusion in the context of distributed systems.
+Answer: Mutual exclusion ensures that only one process or node can access a critical section or shared resource at any given time to prevent conflicts and maintain data integrity.
+Question: How does the token ring-based mutual exclusion algorithm work?
+Answer: The algorithm uses a token that circulates around a ring network of nodes. Only the node holding the token can access the shared resource. Nodes must wait for the token to enter their possession before accessing the resource.
+Question: What role does the token play in the algorithm?
+Answer: The token serves as a permission slip that grants the holder exclusive access to the shared resource. Only the node holding the token can enter its critical section and access the resource.
+Question: How does the algorithm ensure fairness among nodes?
+Answer: The token circulates around the ring, ensuring that every node eventually gets a turn to access the resource. This provides equal opportunity for all nodes and ensures fairness in resource allocation.
+Question: What happens if a node fails or becomes inactive in the token ring network?
+Answer: Even if a node fails or becomes inactive, the token will continue to circulate around the ring. Other active nodes will still have the opportunity to access the resource, preventing deadlock situations.
+Question: Can the token ring-based algorithm handle multiple shared resources?
+Answer: Yes, the algorithm can be extended to manage multiple shared resources by introducing multiple tokens, each dedicated to a specific resource. Nodes then coordinate access to different resources using different tokens.
+Question: How does the algorithm handle requests for the shared resource when the token is not available?
+Answer: Nodes must wait until they receive the token before accessing the resource. They can queue their requests and proceed with their critical section once they receive the token.
+Question: What are the advantages and disadvantages of the token ring-based mutual exclusion algorithm?
+Answer: Advantages include fairness, decentralized control, and deadlock avoidance. However, disadvantages may include potential delays in accessing the resource and the overhead of token circulation.
+
+A critical section refers to a specific segment of code within a concurrent program that accesses shared resources or variables which are susceptible to race conditions or data inconsistency issues if accessed simultaneously by multiple threads or processes. In other words, a critical section is a part of the program where the correctness of the program depends on ensuring mutual exclusion, ensuring that only one thread or process can execute the critical section at any given time.

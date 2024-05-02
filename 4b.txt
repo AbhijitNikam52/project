@@ -1,0 +1,291 @@
+client.py
+
+# Python3 program imitating a client process
+
+from timeit import default_timer as timer
+from dateutil import parser
+import threading
+import datetime
+import socket
+import time
+
+
+# client thread function used to send time at client side
+def startSendingTime(slave_client):
+
+	while True:
+		# provide server with clock time at the client
+		slave_client.send(str(
+					datetime.datetime.now()).encode())
+
+		print("Recent time sent successfully",
+										end = "\n\n")
+		time.sleep(5)
+
+
+# client thread function used to receive synchronized time
+def startReceivingTime(slave_client):
+
+	while True:
+		# receive data from the server
+		Synchronized_time = parser.parse(
+						slave_client.recv(1024).decode())
+
+		print("Synchronized time at the client is: " + \
+									str(Synchronized_time),
+									end = "\n\n")
+
+
+# function used to Synchronize client process time
+def initiateSlaveClient(port = 8080):
+
+	slave_client = socket.socket()		
+	
+	# connect to the clock server on local computer
+	slave_client.connect(('127.0.0.1', port))
+
+	# start sending time to server
+	print("Starting to receive time from server\n")
+	send_time_thread = threading.Thread(
+					target = startSendingTime,
+					args = (slave_client, ))
+	send_time_thread.start()
+
+
+	# start receiving synchronized from server
+	print("Starting to receiving " + \
+						"synchronized time from server\n")
+	receive_time_thread = threading.Thread(
+					target = startReceivingTime,
+					args = (slave_client, ))
+	receive_time_thread.start()
+
+
+# Driver function
+if __name__ == '__main__':
+
+	# initialize the Slave / Client
+	initiateSlaveClient(port = 8080)
+
+-------------------------------------------------------
+server.py
+
+# Python3 program imitating a clock server
+from dateutil import parser
+import threading
+import datetime
+import socket
+import time
+
+
+# datastructure used to store client address and clock data
+client_data = {}
+
+
+''' nested thread function used to receive
+	clock time from a connected client '''
+def startReceivingClockTime(connector, address):
+
+	while True:
+		# receive clock time
+		clock_time_string = connector.recv(1024).decode()
+		clock_time = parser.parse(clock_time_string)
+		clock_time_diff = datetime.datetime.now() - \
+												clock_time
+
+		client_data[address] = {
+					"clock_time"	 : clock_time,
+					"time_difference" : clock_time_diff,
+					"connector"	 : connector
+					}
+
+		print("Client Data updated with: "+ str(address),
+											end = "\n\n")
+		time.sleep(5)
+
+
+''' master thread function used to open portal for
+	accepting clients over given port '''
+def startConnecting(master_server):
+	
+	# fetch clock time at slaves / clients
+	while True:
+		# accepting a client / slave clock client
+		master_slave_connector, addr = master_server.accept()
+		slave_address = str(addr[0]) + ":" + str(addr[1])
+
+		print(slave_address + " got connected successfully")
+
+		current_thread = threading.Thread(
+						target = startReceivingClockTime,
+						args = (master_slave_connector,
+										slave_address, ))
+		current_thread.start()
+
+
+# subroutine function used to fetch average clock difference
+def getAverageClockDiff():
+
+
+	time_difference_list = list(client['time_difference']
+								for client_addr, client
+									in client_data.items())
+									
+
+	sum_of_clock_difference = sum(time_difference_list, \
+								datetime.timedelta(0, 0))
+
+	average_clock_difference = sum_of_clock_difference \
+										/ len(client_data)
+
+	return average_clock_difference
+
+
+''' master sync thread function used to generate
+	cycles of clock synchronization in the network '''
+def synchronizeAllClocks():
+
+	while True:
+
+		print("New synchronization cycle started.")
+		print("Number of clients to be synchronized: " + \
+									str(len(client_data)))
+
+		if len(client_data) > 0:
+
+			average_clock_difference = getAverageClockDiff()
+
+			for client_addr, client in client_data.items():
+				try:
+					synchronized_time = \
+						datetime.datetime.now() + \
+									average_clock_difference
+
+					client['connector'].send(str(
+							synchronized_time).encode())
+
+				except Exception as e:
+					print("Something went wrong while " + \
+						"sending synchronized time " + \
+						"through " + str(client_addr))
+
+		else :
+			print("No client data." + \
+						" Synchronization not applicable.")
+
+		print("\n\n")
+
+		time.sleep(5)
+
+
+# function used to initiate the Clock Server / Master Node
+def initiateClockServer(port = 8080):
+
+	master_server = socket.socket()
+	master_server.setsockopt(socket.SOL_SOCKET,
+								socket.SO_REUSEADDR, 1)
+
+	print("Socket at master node created successfully\n")
+	
+	master_server.bind(('', port))
+
+	# Start listening to requests
+	master_server.listen(10)
+	print("Clock server started...\n")
+
+	# start making connections
+	print("Starting to make connections...\n")
+	master_thread = threading.Thread(
+						target = startConnecting,
+						args = (master_server, ))
+	master_thread.start()
+
+	# start synchronization
+	print("Starting synchronization parallelly...\n")
+	sync_thread = threading.Thread(
+						target = synchronizeAllClocks,
+						args = ())
+	sync_thread.start()
+
+
+
+# Driver function
+if __name__ == '__main__':
+
+	# Trigger the Clock Server
+	initiateClockServer(port = 8080)
+-----------------------------------------------------
+
+Assignment 4:
+
+Terminal 1:
+
+    python server.py
+
+
+Terminal 2:
+
+    python client.py
+
+pip install python-dateutil
+
+
+Berkeley’s Algorithm is an algorithm that is used for clock Synchronisation in distributed systems. This algorithm is used in cases when some or all systems of the distributed network have one of these issues −
+• A. The machine does not have an accurate time source.
+• B. The network or machine does not have a UTC server.
+The algorithm is designed to work in a network where clocks may be running at slightly different rates, and some computers may experience intermittent communication failures.
+The basic idea behind Berkeley's Algorithm is that each computer in the network periodically sends its local time to a designated "master" computer, which then computes the correct time for the network based on the received timestamps. The master computer then sends the correct time back to all the computers in the network, and each computer sets its clock to the received time.
+
+Berkeley’s Algorithm
+In this algorithm, the system chooses a node as master/ leader node. This is done from pool nodes in the server.
+The algorithm is −
+• An election process chooses the master node in the server.
+• The leader then polls followers that provide their time in a way similar to Cristian’s Algorithm, this is done periodically.
+• The leader then calculates the relative time that other nodes have to change or adjust to synchronize to the global clock time which is the average of times that are provided to the leader node.
+Let’s sum-up steps followed to synchronize the clock using the Berkeley algorithm,
+Nodes in the distributed system with their clock timings −
+N1 -> 14:00 (master node)
+N2 -> 13: 46
+N3 -> 14: 15
+Step 1 − The Leader is elected, node N1 is the master in the system.
+Step 2 − leader requests for time from all nodes.
+N1 -> time : 14:00
+N2 -> time : 13:46
+N3 -> time : 14:20
+Step 3 − The leader averages the times and sends the correction time back to the nodes.
+N1 -> Corrected Time 14:02 (+2)
+N2 -> Corrected Time 14:02 (+16)
+N3 -> Corrected Time 14:02 (-18)
+This shows how the synchronization of nodes of a distributed system is done using Berkeley’s algorithm.
+
+Questions for Clock Server (Master Node):
+Question: How does the clock server initialize and handle client connections?
+Answer: The clock server initializes a socket and listens for incoming connections. Upon connection, it spawns a new thread to receive clock time data from the client.
+Question: Explain the purpose of the client_data dictionary in the server code.
+Answer: The client_data dictionary is used to store information about connected clients, including their address, clock time, time difference, and connection object.
+Question: How does the server perform clock synchronization among connected clients?
+Answer: The server calculates the average clock difference among all connected clients and sends back synchronized time to each client. This process is repeated periodically in synchronization cycles.
+Questions for Client Process:
+Question: How does the client initialize and connect to the clock server?
+Answer: The client initializes a socket and connects to the clock server using the server's IP address and port number.
+Question: Describe the role of the startSendingTime and startReceivingTime functions in the client code.
+Answer: startSendingTime function continuously sends the client's current time to the server, while startReceivingTime function continuously receives synchronized time from the server.
+Question: What is the purpose of using threading in the client process?
+Answer: Threading allows the client process to perform multiple tasks concurrently, such as sending time to the server and receiving synchronized time, without blocking the main execution thread.
+General Questions:
+Question: How does the Berkeley algorithm achieve clock synchronization?
+Answer: The Berkeley algorithm synchronizes clocks in a distributed system by calculating the average clock difference among connected clients and adjusting each client's clock accordingly.
+
+Clock Server (Master Node):
+dateutil: Used for parsing date and time strings.
+threading: Used for implementing multithreading to handle multiple client connections concurrently.
+datetime: Used for working with date and time objects.
+socket: Used for socket programming to establish network communication.
+time: Used for introducing delays and sleeping periods in the execution of threads.
+Client Process:
+timeit: Used for timing the execution of code (though not used explicitly in the code snippet provided).
+dateutil: Used for parsing date and time strings.
+threading: Used for implementing multithreading to handle sending and receiving time data concurrently.
+datetime: Used for working with date and time objects.
+socket: Used for socket programming to establish network communication.
+time: Used for introducing delays and sleeping periods in the execution of threads.
